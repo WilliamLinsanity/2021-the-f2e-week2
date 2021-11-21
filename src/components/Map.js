@@ -2,93 +2,118 @@ import React,{useEffect,useRef,useState} from 'react'
 import "leaflet/dist/leaflet.css";
 import 'react-leaflet-markercluster/dist/styles.min.css';
 import L from "leaflet";
-import jsSHA from 'jssha';
 import "leaflet.markercluster";
 import { TileLayer, Marker, Popup, MapContainer } from 'react-leaflet'
 import constants from '../constants';
 import MarkerClusterGroup from "react-leaflet-markercluster";
+import {useSelector} from 'react-redux'
+
 
 const Map = () =>{
-    const [stationsList,getStationsList] = useState([])
-    const [zoom, setZoom] = useState(13)
-    const [hasLocation, setHasLocation] = useState(false)
-    const [currentLocation, setCurrentLocation] = useState([51.505, -0.09]);
+    // const [stationsList,getStationsList] = useState([])
+    // const [hasLocation, setHasLocation] = useState(false)
+    // const [nearbyLocationList, getNearbyLocationList] = useState([])
+    const [currentLocation, setCurrentLocation] = useState([51.505, -0.09])
     let [markers, setMarkers] = useState(null);
-    const mapRef = useRef()    
+    const zoom = 13
+    const stations = useSelector(state => state.stations)
+    const currentStationInfo = useSelector(state => state.currentStationInfo)
+    const statusList = [{code:0, status:'停止營運'},{code:1, status:'正常營運'},{code:2, status:'暫停營運'}]
+    const mapRef = useRef()   
+    const popupRef = useRef() 
+        // 定位
         useEffect(() => {
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    position =>{
-                        setCurrentLocation([position.coords.latitude, position.coords.longitude])                                      
-                    })
+                navigator.geolocation.getCurrentPosition(position =>{
+                    setCurrentLocation([position.coords.latitude, position.coords.longitude])
+                }) 
             }
         }, []);
 
-    const getAuthorizationHeader = () =>{
-        const AppID = '675dad84079841b3a881006714b3d91e'
-        const AppKey= 'D0MV31l-dasLMnv5qe9Ly56Rm6Y'       
-        let GMTString = new Date().toGMTString();
-        let ShaObj = new jsSHA('SHA-1', 'TEXT');
-        ShaObj.setHMACKey(AppKey, 'TEXT');
-        ShaObj.update('x-date: ' + GMTString);
-        let HMAC = ShaObj.getHMAC('B64');
-        let Authorization = 'hmac username="' + AppID + '", algorithm="hmac-sha1", headers="x-date", signature="' + HMAC + '"';
-        return { 'Authorization': Authorization, 'X-Date': GMTString }; 
-    }
     const createClusterCustomIcon = function (cluster) {
         return L.divIcon({
           html: `<span>${cluster.getChildCount()}</span>`,
           className: 'marker-cluster-custom',
           iconSize: L.point(40, 40, true),
         });
-      }
-    useEffect(() => {
-        // 一開始的搜尋
-        fetch('https://ptx.transportdata.tw/MOTC/v2/Bike/Station/Taoyuan?$top=100&$format=JSON',
-        {
-           headers: getAuthorizationHeader()
-        }).then(res=>res.json())
-        .then(function (response) {
-            getStationsList(response)
-        })
-        .catch(function (error) {
-          console.log(error);
-        }); 
-        // fetch(`https://ptx.transportdata.tw/MOTC/v2/Bike/Availability/NearBy?$top=30&$spatialFilter=nearby(${currentLocation}%2C%20100)&$format=JSON`,
-        // {
-        //    headers: getAuthorizationHeader()
-        // }).then(res=>res.json())
-        // .then(function (response) {
-            
-        //     console.log(response.data);
-        // })
-        // .catch(function (error) {
-        //   console.log(error);
-        // }); 
+      }           
 
-    }, [currentLocation]);     
-
-    
+    // 取得目前位置後，在地圖上maker及取得附近1公里的自行車站點
     useEffect(() => {
         if(mapRef.current){
             mapRef.current.setView(
                 currentLocation,
                 zoom
-              );
-              const userMarker = L.marker(currentLocation, {
+            );
+            const userMarker = L.marker(currentLocation, {
                 icon:constants.positionIcon,
-              });
-              mapRef.current.addLayer(userMarker);
-        }
-    }, [currentLocation,zoom]);
+            });
+            mapRef.current.addLayer(userMarker);                                    
+        }        
+    }, [currentLocation,zoom]); 
 
-    useEffect(() => {              
-        setMarkers(stationsList.map(item=>(
-              <Marker position={[item.StationPosition.PositionLat,item.StationPosition.PositionLon]} icon={constants.spotIcon}  key={item.StationUID}>
-                <Popup>You are here</Popup>
-              </Marker>
-            )))           
-    }, [hasLocation,stationsList]);
+    useEffect(() => {
+         //把取得的站點資訊放入popup中  
+        if(stations && stations.length){
+            setMarkers(stations.map(item=>(
+                <Marker position={[item.StationPosition.PositionLat,item.StationPosition.PositionLon]} icon={constants.spotIcon}  key={item.StationUID}>
+                    <Popup ref={popupRef}>
+                        <div className="station-name">{item.StationName.Zh_tw}</div>
+                        <div className="station-address">{item.StationAddress.Zh_tw}</div>
+                        <div className="station-updated-time">{item.UpdateTime.slice(0,-9).replace("T", " ")}</div>
+                        <div className={'station-status' + (item.ServiceStatus === 2 ? "closed " : "") + (item.ServiceStatus === 0 ? 'stop ' : '')}>{statusList.find(element=>element.code === item.ServiceStatus).status}</div>
+                        <div className="station-availability">
+                            <div className="rent">
+                                <div className="name">可借單車</div> 
+                                <div className="number">{item.AvailableRentBikes}</div>
+                            </div>
+                            <div className="return">
+                                <div className="name">可停空位</div>
+                                <div className="number">{item.AvailableReturnBikes}</div>
+                            </div>                                             
+                        </div>
+                    </Popup>
+                </Marker>
+            )))                 
+        }
+    }, [stations]);
+
+    //根據搜尋結果移至目標位置
+    useEffect(() => {
+        if(mapRef && mapRef.current && stations && stations.length){
+            mapRef.current.flyTo([stations[0].StationPosition.PositionLat,stations[0].StationPosition.PositionLon], 15) 
+        }
+    }, [markers,stations]);
+
+    //根據點選的站點讓地圖移動到該點
+    useEffect(() => {
+        if(currentStationInfo){
+            setMarkers(
+                <Marker position={[currentStationInfo.StationPosition.PositionLat,currentStationInfo.StationPosition.PositionLon]} icon={constants.spotIcon}  key={currentStationInfo.StationUID}>
+                    <Popup ref={popupRef} open={true}>
+                        <div className="station-name">{currentStationInfo.StationName.Zh_tw}</div>
+                        <div className="station-address">{currentStationInfo.StationAddress.Zh_tw}</div>
+                        <div className="station-updated-time">{currentStationInfo.UpdateTime.slice(0,-9).replace("T", " ")}</div>
+                        <div className={'station-status' + (currentStationInfo.ServiceStatus === 2 ? "closed " : "") + (currentStationInfo.ServiceStatus === 0 ? 'stop ' : '')}>{statusList.find(element=>element.code === currentStationInfo.ServiceStatus).status}</div>
+                        <div className="station-availability">
+                            <div className="rent">
+                                <div className="name">可借單車</div> 
+                                <div className="number">{currentStationInfo.AvailableRentBikes}</div>
+                            </div>
+                            <div className="return">
+                                <div className="name">可停空位</div>
+                                <div className="number">{currentStationInfo.AvailableReturnBikes}</div>
+                            </div>                                             
+                        </div>
+                    </Popup>
+                </Marker>                
+            )
+            popupRef.current.setLatLng([currentStationInfo.StationPosition.PositionLat,currentStationInfo.StationPosition.PositionLon])
+            console.log(popupRef);
+            // popupRef.current.leafletElement.openPopup()
+        }
+    }, [currentStationInfo]);
+
     return(
         <MapContainer className="map markercluster-map" ref={mapRef} useFlyTo={true} zoom={zoom} center={currentLocation} scrollWheelZoom whenCreated={mapInstance => { mapRef.current = mapInstance }}>
             <TileLayer

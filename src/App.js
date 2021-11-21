@@ -2,20 +2,29 @@ import './App.css';
 import Header from './components/Header';
 import Map from './components/Map'
 import SearchBlock from './components/SearchBlock';
+import { Provider } from "react-redux";
+import { createStore } from "redux";
 import styled from "@emotion/styled";
-const Content = styled.div`
-display: grid;
-grid-template-columns: 1fr 9fr;
-grid-template-areas:"search map";
+import reduce from "./components/redux/reduce";
+
+const store = createStore(reduce);
+
+const Container = styled.div`
+display: flex;
+position: relative;
+height: 90vh;
 `
+
 function App() {
   return (
     <div className="App">
-      <Header/>
-      <Content>
+      <Provider store={store}>
+        <Header/>
+        <Container>
           <SearchBlock/>
           <Map></Map>
-      </Content>
+        </Container>
+      </Provider>
     </div>
   );
 }

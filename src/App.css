@@ -1,5 +1,5 @@
 .App {
-  text-align: center;
+  text-align: center;  
 }
 
 .App-logo {
@@ -34,7 +34,8 @@
 }
 
 .map{
-  grid-area:map;
+  position: relative;
+  height: calc(100vh - 80px)
 }
 
 .marker-cluster-custom {
@@ -46,4 +47,105 @@
   line-height: 37px;
   text-align: center;
   width: 40px;
+}
+
+.search-input{
+  width: calc(100% - 48px);
+  position: relative;
+  padding: 0 24px;
+}
+
+.search-input .search{
+  position: absolute;
+  left:34px;
+  top: 0;
+  height: 100%;
+}
+
+.search-input .search > path {
+  fill: #0E5978;       
+}
+
+.display-none{
+  display:none;
+}
+
+.leaflet-popup-content{
+  font-family: Noto Sans;
+}
+
+.station-name{
+  color: #262626;
+  font-weight: bold;
+  font-size: 20px;
+  padding-bottom: 12px;
+}
+
+.station-address{
+  color: #484848; 
+  font-size: 16px;
+  padding-bottom: 12px;
+}
+
+.station-updated-time{
+  color: #484848;
+  font-size: 16px;
+  padding-bottom: 12px;
+}
+
+.station-status{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0A4259;
+  background: #F0F9FC;
+  font-weight: bold;
+  font-size: 14px;
+  padding-bottom: 12px;
+  border: 1px solid #0A4259;
+  border-radius: 4px;
+  padding: 4px 8px;
+  width:72px;
+  height: 30px;
+}
+
+.closed{
+  background: #F4DCDC;
+  border: 1px solid #7B7B7B;
+  color: #CC1010;
+}
+
+.stop{
+  background: #E5E5E5;
+  border: 1px solid #CC1010;
+  color: #7B7B7B;
+}
+
+.station-availability{
+  display: flex;
+  justify-content: space-between;
+}
+
+.rent, .return{
+  border: 1px solid #0E5978;
+  margin: 12px 0 16px 0;
+  width: 45%;
+  height: 75px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.station-availability .name{
+  font-weight: bold;
+  font-size: 16px;
+  color: #0E5978;
+  padding-bottom: 8px;
+}
+
+.station-availability .number{
+  font-weight: bold;
+  font-size: 28px;
+  color: #262626;
 }
